@@ -7,6 +7,10 @@
 #include <fcntl.h> // open()
 #include <unistd.h>
 #include <sys/stat.h> // stat()
+#include <fstream> // fstream
+#include <pwd.h> // uid to username
+#include <sstream>
+#include <algorithm> // find()
 #define BUF_SIZE 1024
 using namespace std;
 
@@ -22,6 +26,7 @@ struct info{
 
 string cat(string);
 void open_read(vector<info>&, info&, string, string);
+void parse_mem(vector<info>&, info&, string);
 string getuser(string);
 string gettype(string);
 string getnode(string);
@@ -29,7 +34,8 @@ void print_infos(vector<info>&);
 
 int
 main(int argc, char *argv[]) {
-    printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "COMMAND", "PID", "USER", "FD", "TYPE", "NODE", "NAME");
+    printf("%-32s %-8s %-8s %-4s %-8s %-16s %s\n", 
+        "COMMAND", "PID", "USER", "FD", "TYPE", "NODE", "NAME");
     fflush(stdout);
     DIR *dp;
     dirent *dirp;
@@ -49,11 +55,11 @@ main(int argc, char *argv[]) {
         info inf;
         inf.command = cat(s + "/comm");
         inf.pid = proc_num;
-        //inf.user = getuser(inf, s + "/status");
+        inf.user = getuser(s + "/status");
         open_read(infos, inf, s + "/cwd", "cwd");
         open_read(infos, inf, s + "/root", "rtd");
         open_read(infos, inf, s + "/exe", "txt");
-        //open_read(infos, inf, s + "/maps", "mem");
+        open_read(infos, inf, s + "/maps", "mem");
         //open_read(infos, inf, s + "/fd", "fd");
     }
     print_infos(infos);
@@ -89,10 +95,16 @@ void open_read(vector<info> &infos, info &inf, string file, string FD) {
         else {
             inf.name = file + " (readlink: Permission denied)";
         }
+        infos.push_back(inf);
     }
     else if (FD == "mem") {
+        int fd = open(file.c_str(), O_RDONLY);
+        if (fd < 0)
+            return;
+        close(fd);
         inf.fd = FD;
-        cat(FD);
+        inf.type = "REG";
+        parse_mem(infos, inf, file);
     }
     else { // fd
         if((pdp = opendir(file.c_str())) == NULL) {
@@ -103,10 +115,50 @@ void open_read(vector<info> &infos, info &inf, string file, string FD) {
             cout << pdirp->d_name << endl; 
         }
     }
-    infos.push_back(inf);
     //while ((pdirp = readdir(pdp)) != NULL) {
     //    printf("%s\n", pdirp->d_name);
     //}
+}
+
+void parse_mem(vector<info> &infos, info &inf, string file) {
+    fstream f(file.c_str(), std::fstream::in);
+    string line;
+    string tmp;
+    vector<string> nodes;
+    bool first = true;
+    while(getline(f, line)) {
+        stringstream ss(line);
+        for (int i = 0; i < 5; i++) 
+            ss >> tmp;
+        if (tmp == "0") continue;
+        if (find(nodes.begin(), nodes.end(), tmp) != nodes.end()) continue;
+        nodes.push_back(tmp);
+        inf.node = tmp;
+        ss >> tmp;
+        inf.name = tmp;
+        if (first) {
+            first = false;
+            continue;
+        }
+        infos.push_back(inf);
+    }
+}
+
+string getuser(string file) {
+    fstream f(file.c_str(), std::fstream::in);
+    string word;
+    while (f >> word) {
+        if (word == "Uid:") {
+            f >> word;
+            break;
+        }
+    }
+    f.close();
+    if (word.size() == 0 || !isdigit(word[0]))
+        return "<deleted>";
+    struct passwd *user_passwd = getpwuid(stoi(word));
+    return string(user_passwd->pw_name);
+
 }
 
 string gettype(string file) {
@@ -145,9 +197,11 @@ string getnode(string file) {
 
 void print_infos(vector<info>& infos) {
     for (auto inf : infos) {
-        printf("%-32s %-8s %-8s %-16s %s\n", 
+        printf("%-32s %-8s %-8s %-4s %-8s %-16s %s\n", 
                 inf.command.c_str(), 
                 inf.pid.c_str(),
+                inf.user.c_str(),
+                inf.fd.c_str(),
                 inf.type.c_str(),
                 inf.node.c_str(),
                 inf.name.c_str());
