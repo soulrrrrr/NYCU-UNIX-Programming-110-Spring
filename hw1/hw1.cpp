@@ -12,6 +12,7 @@
 #include <sstream>
 #include <algorithm> // find(), sort()
 #include <regex>
+#include <errno.h>
 #define BUF_SIZE 1024
 using namespace std;
 
@@ -37,6 +38,22 @@ void print_infos(vector<info>&, string, string, string);
 
 int
 main(int argc, char *argv[]) {
+    /* parse arguments */
+    string cc, tt, ff;
+    for (int i = 1; i < argc; i += 2) {
+        if (string(argv[i]) == "-c")
+            cc = string(argv[i+1]);
+        else if (string(argv[i]) == "-t") {
+            tt = string(argv[i+1]); 
+            if (tt != "REG" || tt != "CHR" || tt != "DIR" || tt != "FIFO" || tt != "SOCK" || tt != "unknown") {
+                cout << "TYPE error." << endl;
+                return 0;
+            }
+        }
+        else if (string(argv[i]) == "-f")
+            ff = string(argv[i+1]); 
+    }
+    ////
     printf("%-32s %-8s %-8s %-4s %-8s %-16s %s\n", 
         "COMMAND", "PID", "USER", "FD", "TYPE", "NODE", "NAME");
     fflush(stdout);
@@ -67,22 +84,13 @@ main(int argc, char *argv[]) {
         open_read(infos, inf, s + "/maps", "mem");
         open_read(infos, inf, s + "/fd", "fd");
     }
-    string cc, tt, ff;
-    for (int i = 1; i < argc; i += 2) {
-        if (string(argv[i]) == "-c")
-            cc = string(argv[i+1]);
-        else if (string(argv[i]) == "-t")
-            tt = string(argv[i+1]); 
-        else if (string(argv[i]) == "-f")
-            ff = string(argv[i+1]); 
-    }
     print_infos(infos, cc, tt, ff);
     return 0;
 }
 
 string cat(string s) {
     int fd = open(s.c_str(), O_RDONLY);
-    if (fd == -1) {
+    if (fd == -1 && errno == EACCES) {
         string ret = "broken";
         return ret;
     }
