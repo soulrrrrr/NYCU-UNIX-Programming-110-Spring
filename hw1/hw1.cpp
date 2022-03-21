@@ -10,7 +10,8 @@
 #include <fstream> // fstream
 #include <pwd.h> // uid to username
 #include <sstream>
-#include <algorithm> // find()
+#include <algorithm> // find(), sort()
+#include <regex>
 #define BUF_SIZE 1024
 using namespace std;
 
@@ -27,10 +28,12 @@ struct info{
 string cat(string);
 void open_read(vector<info>&, info&, string, string);
 void parse_mem(vector<info>&, info&, string);
+void parse_fd(vector<info>&, info&, string);
 string getuser(string);
+string getfd(string, string);
 string gettype(string);
 string getnode(string);
-void print_infos(vector<info>&);
+void print_infos(vector<info>&, string, string, string);
 
 int
 main(int argc, char *argv[]) {
@@ -54,22 +57,33 @@ main(int argc, char *argv[]) {
         string s = "/proc/" + proc_num;
         info inf;
         inf.command = cat(s + "/comm");
+        if (inf.command == "broken")
+            continue;
         inf.pid = proc_num;
         inf.user = getuser(s + "/status");
         open_read(infos, inf, s + "/cwd", "cwd");
         open_read(infos, inf, s + "/root", "rtd");
         open_read(infos, inf, s + "/exe", "txt");
         open_read(infos, inf, s + "/maps", "mem");
-        //open_read(infos, inf, s + "/fd", "fd");
+        open_read(infos, inf, s + "/fd", "fd");
     }
-    print_infos(infos);
+    string cc, tt, ff;
+    for (int i = 1; i < argc; i += 2) {
+        if (string(argv[i]) == "-c")
+            cc = string(argv[i+1]);
+        else if (string(argv[i]) == "-t")
+            tt = string(argv[i+1]); 
+        else if (string(argv[i]) == "-f")
+            ff = string(argv[i+1]); 
+    }
+    print_infos(infos, cc, tt, ff);
     return 0;
 }
 
 string cat(string s) {
     int fd = open(s.c_str(), O_RDONLY);
     if (fd == -1) {
-        string ret = s + " (can't open maps: Permission denied)";
+        string ret = "broken";
         return ret;
     }
     char buf[BUF_SIZE];
@@ -108,16 +122,33 @@ void open_read(vector<info> &infos, info &inf, string file, string FD) {
     }
     else { // fd
         if((pdp = opendir(file.c_str())) == NULL) {
-            cout << "error open" << file << endl;
+            inf.fd = "NOFD";
+            inf.type = " ";
+            inf.node = " ";
+            inf.name = file + " (opendir: Permission denied)";
+            infos.push_back(inf);
             return;
         }
         while ((pdirp = readdir(pdp)) != NULL) {
-            cout << pdirp->d_name << endl; 
+            if (!isdigit(pdirp->d_name[0]))
+                continue; 
+            string name = file+"/"+string(pdirp->d_name);
+            inf.fd = getfd(file, string(pdirp->d_name));
+            inf.type = gettype(name);
+            inf.node = getnode(name);
+            int read_size = readlink(name.c_str(), buf, BUF_SIZE);
+            if (read_size > 0) {
+                buf[read_size] = '\0';
+                inf.name = string(buf);
+                int found = inf.name.find(" (deleted)");
+                if (found != std::string::npos) {
+                    inf.name.replace(found, 10, "");
+                }
+            }
+            infos.push_back(inf);
         }
+        closedir(pdp);
     }
-    //while ((pdirp = readdir(pdp)) != NULL) {
-    //    printf("%s\n", pdirp->d_name);
-    //}
 }
 
 void parse_mem(vector<info> &infos, info &inf, string file) {
@@ -136,6 +167,11 @@ void parse_mem(vector<info> &infos, info &inf, string file) {
         inf.node = tmp;
         ss >> tmp;
         inf.name = tmp;
+        int found = inf.name.find(" (deleted)");
+        if (found != std::string::npos) {
+            inf.type = "DEL";
+            inf.name.replace(found, 10, "");
+        }
         if (first) {
             first = false;
             continue;
@@ -159,6 +195,39 @@ string getuser(string file) {
     struct passwd *user_passwd = getpwuid(stoi(word));
     return string(user_passwd->pw_name);
 
+}
+
+string getfd(string file, string fd)  { // only for fd
+    struct stat file_stat;
+    string ret = "unknown";
+    int per = 0;
+    string name = file + "/" + fd;
+    if (lstat(name.c_str(), &file_stat) < 0)
+        return ret;
+    if (file_stat.st_mode & S_IRWXU & S_IRUSR) {
+       per += 2; 
+    }
+    if (file_stat.st_mode & S_IRWXU & S_IWUSR) {
+       per += 1; 
+    }
+    string p;
+    switch(per) {
+        case 3:
+            p = "u";
+            break;
+        case 2:
+            p = "r";
+            break;
+        case 1:
+            p = "w";
+            break;
+        default:
+            p = "?";
+            break;
+    }
+    return (fd + p);
+
+    
 }
 
 string gettype(string file) {
@@ -195,8 +264,21 @@ string getnode(string file) {
     return to_string(file_stat.st_ino);
 }
 
-void print_infos(vector<info>& infos) {
+void print_infos(vector<info>& infos, string cc, string tt, string ff) {
+    std::smatch m;
     for (auto inf : infos) {
+        if (!cc.empty()) {
+            if (!regex_search(inf.command, m, regex(cc)))
+                continue;
+        }
+        if (!tt.empty()) {
+            if (inf.type != tt)
+                continue;
+        }
+        if (!ff.empty()) {
+            if (!regex_search(inf.name, m, regex(ff)))
+                continue;
+        }
         printf("%-32s %-8s %-8s %-4s %-8s %-16s %s\n", 
                 inf.command.c_str(), 
                 inf.pid.c_str(),
