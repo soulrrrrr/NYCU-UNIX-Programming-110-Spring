@@ -45,8 +45,8 @@ main(int argc, char *argv[]) {
             cc = string(argv[i+1]);
         else if (string(argv[i]) == "-t") {
             tt = string(argv[i+1]); 
-            if (tt != "REG" || tt != "CHR" || tt != "DIR" || tt != "FIFO" || tt != "SOCK" || tt != "unknown") {
-                cout << "TYPE error." << endl;
+            if (tt != "REG" && tt != "CHR" && tt != "DIR" && tt != "FIFO" && tt != "SOCK" && tt != "unknown") {
+                cout << "Invalid TYPE option." << endl;
                 return 0;
             }
         }
@@ -167,6 +167,7 @@ void parse_mem(vector<info> &infos, info &inf, string file) {
     bool first = true;
     while(getline(f, line)) {
         stringstream ss(line);
+        inf.fd = "mem";
         for (int i = 0; i < 5; i++) 
             ss >> tmp;
         if (tmp == "0") continue;
@@ -177,7 +178,7 @@ void parse_mem(vector<info> &infos, info &inf, string file) {
         inf.name = tmp;
         int found = inf.name.find(" (deleted)");
         if (found != std::string::npos) {
-            inf.type = "DEL";
+            inf.fd = "DEL";
             inf.name.replace(found, 10, "");
         }
         if (first) {
