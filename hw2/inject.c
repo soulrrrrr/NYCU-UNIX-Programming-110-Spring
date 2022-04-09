@@ -28,6 +28,12 @@ void init() {
     memset(procpath, 0, sizeof(path));
 }
 
+int min(int a, int b) {
+    if (a < b)
+        return a;
+    return b;
+}
+
 /* chmod */
 static int (*old_chmod)(const char *, mode_t) = NULL;
 
@@ -39,15 +45,17 @@ int chmod(const char *pathname, mode_t mode) {
             old_chmod = dlsym(handle, "chmod");
     }
     int ret = -1;
-    if(old_chmod != NULL)
+    if(old_chmod != NULL) {
         ret = old_chmod(pathname, mode);
-    realpath(pathname, path);
-    sprintf(msg,
+        realpath(pathname, path);
+        sprintf(
+            msg,
             "chmod(\"%s\", %03o) = %d",
             path,
             mode,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
 
@@ -62,16 +70,19 @@ int chown(const char *pathname, uid_t owner, gid_t group) {
             old_chown = dlsym(handle, "chown");
     }
     int ret = -1;
-    if(old_chown != NULL)
+    if(old_chown != NULL) {
         ret = old_chown(pathname, owner, group);
-    realpath(pathname, path);
-    sprintf(msg,
+        realpath(pathname, path);
+        sprintf(
+            msg,
             "chown(\"%s\", %d, %d) = %d",
             path,
             owner,
             group,
             ret);
-    logger_output();
+        logger_output();
+
+    }
     return ret;
 }
 
@@ -88,13 +99,15 @@ int close(int fd) {
     sprintf(procpath, "/proc/%d/fd/%d", getpid(), fd);
     readlink(procpath, path, PATH_SIZE);
     int ret = -1;
-    if(old_close != NULL)
+    if(old_close != NULL) {
         ret = old_close(fd);
-    sprintf(msg,
+        sprintf(
+            msg,
             "close(\"%s\") = %d",
             path,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
 
@@ -109,15 +122,17 @@ int creat(const char *pathname, mode_t mode) {
             old_creat = dlsym(handle, "creat");
     }
     int ret = -1;
-    if(old_creat != NULL)
+    if(old_creat != NULL) {
         ret = old_creat(pathname, mode);
-    realpath(pathname, path);
-    sprintf(msg,
+        realpath(pathname, path);
+        sprintf(
+            msg,
             "creat(\"%s\", %03o) = %d",
             path,
             mode,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
 
@@ -134,13 +149,15 @@ int fclose(FILE *stream) {
     sprintf(procpath, "/proc/%d/fd/%d", getpid(), fileno(stream));
     readlink(procpath, path, PATH_SIZE);
     int ret = -1;
-    if(old_fclose != NULL)
+    if(old_fclose != NULL) {
         ret = old_fclose(stream);
-    sprintf(msg,
+        sprintf(
+            msg,
             "fclose(\"%s\") = %d",
             path,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
 
@@ -155,15 +172,17 @@ FILE *fopen(const char *pathname, const char *mode) {
             old_fopen = dlsym(handle, "fopen");
     }
     FILE *ret = NULL;
-    if(old_fopen != NULL)
+    if(old_fopen != NULL) {
         ret = old_fopen(pathname, mode);
-    realpath(pathname, path);
-    sprintf(msg,
+        realpath(pathname, path);
+        sprintf(
+            msg,
             "fopen(\"%s\", \"%s\") = %p",
             path,
             mode,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
 
@@ -179,26 +198,28 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
             old_fread = dlsym(handle, "fread");
     }
     size_t ret = 0;
-    if(old_fread != NULL)
+    if(old_fread != NULL) {
         ret = old_fread(ptr, size, nmemb, stream);
-    char buf[33] = {0};
-    strncpy(buf, ptr, 32);
-    for (int i = 0; i < 32; i++) {
-        if (buf[i] == '\0')
-            break;
-        else if (!isprint(buf[i]))
-            buf[i] = '.';
-    }
-    sprintf(procpath, "/proc/%d/fd/%d", getpid(), fileno(stream));
-    readlink(procpath, path, PATH_SIZE);
-    sprintf(msg,
+        char buf[33] = {0};
+        strncpy(buf, ptr, min(nmemb, 32));
+        for (int i = 0; i < 32; i++) {
+            if (buf[i] == '\0')
+                break;
+            else if (!isprint(buf[i]))
+                buf[i] = '.';
+        }
+        sprintf(procpath, "/proc/%d/fd/%d", getpid(), fileno(stream));
+        readlink(procpath, path, PATH_SIZE);
+        sprintf(
+            msg,
             "fread(\"%s\", %lu, %lu, \"%s\") = %ld",
             buf,
             size,
             nmemb,
             path,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
 
@@ -214,32 +235,30 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
             old_fwrite = dlsym(handle, "fwrite");
     }
     size_t ret = 0;
-    if(old_fwrite != NULL)
+    if(old_fwrite != NULL) {
         ret = old_fwrite(ptr, size, nmemb, stream);
-    char buf[33] = {0};
-    strncpy(buf, ptr, 32);
-    for (int i = 0; i < 32; i++) {
-        if (buf[i] == '\0')
-            break;
-        else if (!isprint(buf[i]))
-            buf[i] = '.';
-    }
-    sprintf(procpath, "/proc/%d/fd/%d", getpid(), fileno(stream));
-    readlink(procpath, path, PATH_SIZE);
-    sprintf(msg,
+        char buf[33] = {0};
+        strncpy(buf, ptr, min(nmemb, 32));
+        for (int i = 0; i < 32; i++) {
+            if (buf[i] == '\0')
+                break;
+            else if (!isprint(buf[i]))
+                buf[i] = '.';
+        }
+        sprintf(procpath, "/proc/%d/fd/%d", getpid(), fileno(stream));
+        readlink(procpath, path, PATH_SIZE);
+        sprintf(
+            msg,
             "fwrite(\"%s\", %lu, %lu, \"%s\") = %ld",
             buf,
             size,
             nmemb,
             path,
             ret);
-    logger_output();
+        logger_output();
+    }
     return ret;
 }
-
-
-
-
 
 /* open */
 static int (*old_open)(const char *, int, ...) = NULL;
@@ -261,15 +280,134 @@ int open(const char *pathname, int flags, ...) {
             old_open = dlsym(handle, "open");
     }
     int ret = -1;
-    if(old_open != NULL)
+    if(old_open != NULL) {
         ret = old_open(pathname, flags, mode);
-    realpath(pathname, path);
-    sprintf(msg,
+        realpath(pathname, path);
+        sprintf(
+            msg,
             "open(\"%s\", %03o, %03o) = %d",
             path,
             flags,
             mode,
             ret);
-    logger_output();
+        logger_output();
+    }
+    return ret;
+}
+
+/* read */
+static ssize_t (*old_read)(int, void *, size_t) = NULL;
+
+ssize_t read(int fd, void *buf, size_t count) {
+    init();
+    if(old_read == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_read = dlsym(handle, "read");
+    }
+    ssize_t ret = 0;
+    if(old_read != NULL) {
+        ret = old_read(fd, buf, count);
+        char buff[33] = {0}; // buf is already used
+        strncpy(buff, buf, min(count, 32));
+        for (int i = 0; i < 32; i++) {
+            if (buff[i] == '\0')
+                break;
+            else if (!isprint(buff[i]))
+                buff[i] = '.';
+        }
+        sprintf(procpath, "/proc/%d/fd/%d", getpid(), fd);
+        readlink(procpath, path, PATH_SIZE);
+        sprintf(
+            msg,
+            "read(\"%s\", \"%s\", %lu) = %ld",
+            path,
+            buff,
+            count,
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
+
+/* remove */
+static int (*old_remove)(const char *) = NULL;
+
+int remove(const char *pathname) {
+    init();
+    if(old_remove == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_remove = dlsym(handle, "remove");
+    }
+    int ret = -1;
+    if(old_remove != NULL) {
+        realpath(pathname, path);
+        ret = old_remove(pathname);
+        sprintf(
+            msg,
+            "remove(\"%s\") = %d",
+            path,
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
+/* tmpfile */
+static FILE *(*old_tmpfile)(void) = NULL;
+
+FILE *tmpfile(void) {
+    init();
+    if(old_tmpfile == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_tmpfile = dlsym(handle, "tmpfile");
+    }
+    FILE *ret = NULL;
+    if(old_tmpfile != NULL) {
+        ret = old_tmpfile();
+        sprintf(
+            msg,
+            "tmpfile() = %p",
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
+/* write */
+static ssize_t (*old_write)(int, const void *, size_t) = NULL;
+
+ssize_t write(int fd, const void *buf, size_t count) {
+    init();
+    if(old_write == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_write = dlsym(handle, "write");
+    }
+    ssize_t ret = 0;
+    if(old_write != NULL) {
+        ret = old_write(fd, buf, count);
+        char buff[33] = {0}; // buf is already used
+        strncpy(buff, buf, min(count, 32));
+        for (int i = 0; i < 32; i++) {
+            if (buff[i] == '\0')
+                break;
+            else if (!isprint(buff[i]))
+                buff[i] = '.';
+        }
+        sprintf(procpath, "/proc/%d/fd/%d", getpid(), fd);
+        readlink(procpath, path, PATH_SIZE);
+        sprintf(
+            msg,
+            "write(\"%s\", \"%s\", %lu) = %ld",
+            path,
+            buff,
+            count,
+            ret);
+        logger_output();
+    }
     return ret;
 }
