@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+make
+LD_PRELOAD=./inject.so ${1}
+
