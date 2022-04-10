@@ -18,9 +18,7 @@ char msg[MSG_SIZE];
 char path[PATH_SIZE];
 char procpath[PROCPATH_SIZE];
 
-void logger_output() {
-    fprintf(stderr, "[logger] %s\n", msg);
-}
+void logger_output();
 
 void init() {
     memset(msg, 0, sizeof(msg));
@@ -410,4 +408,18 @@ ssize_t write(int fd, const void *buf, size_t count) {
         logger_output();
     }
     return ret;
+}
+
+void logger_output() {
+    if(old_fopen == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_fopen = dlsym(handle, "fopen");
+    }
+    if(old_fclose == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_fclose = dlsym(handle, "fclose");
+    }
+    dprintf(3, "[logger] %s\n", msg);
 }

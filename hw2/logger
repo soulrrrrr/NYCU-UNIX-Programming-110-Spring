@@ -1,7 +1,42 @@
 #!/bin/bash
 
-set -e
+# default values
+SO_PATH='./logger.so'
+FILE=''
+COMMAND=''
 
-make
-LD_PRELOAD=./inject.so ${1}
+usage() {
+    echo 'usage: ./logger [-o file] [-p sopath] [--] cmd [cmd args ...]
+        -p: set the path to logger.so, default = ./logger.so
+        -o: print output to file, print to "stderr" if no file specified
+        --: separate the arguments for logger and for the command'
+    exit 2
+}
+
+rm tmp.txt 2>/dev/null
+
+while getopts "p:o:" options; do
+    case ${options} in
+        p)
+            PATH=${OPTARG}
+            ;;
+        o)
+            FILE=${OPTARG}
+            ;;
+        *)
+            exit 3
+            ;;
+    esac
+done
+shift $(($OPTIND - 1)) # jump after --
+COMMAND="$@"
+if [ -z "$COMMAND" ]; then
+    echo 'no command given.'
+    exit 1
+fi
+if [ -z "$FILE" ]; then
+    LD_PRELOAD=${SO_PATH} ${COMMAND} 3>&2
+else
+    LD_PRELOAD=${SO_PATH} ${COMMAND} 3>${FILE}
+fi
 
