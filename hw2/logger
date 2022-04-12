@@ -13,18 +13,16 @@ usage() {
     exit 2
 }
 
-rm tmp.txt 2>/dev/null
-
 while getopts "p:o:" options; do
     case ${options} in
         p)
-            PATH=${OPTARG}
+            SO_PATH=${OPTARG}
             ;;
         o)
             FILE=${OPTARG}
             ;;
         *)
-            exit 3
+            usage
             ;;
     esac
 done

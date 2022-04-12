@@ -134,6 +134,31 @@ int creat(const char *pathname, mode_t mode) {
     return ret;
 }
 
+/* creat64 */
+static int (*old_creat64)(const char *, mode_t) = NULL;
+
+int creat64(const char *pathname, mode_t mode) {
+    init();
+    if(old_creat64 == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_creat64 = dlsym(handle, "creat64");
+    }
+    int ret = -1;
+    if(old_creat64 != NULL) {
+        ret = old_creat64(pathname, mode);
+        realpath(pathname, path);
+        sprintf(
+            msg,
+            "creat64(\"%s\", %03o) = %d",
+            path,
+            mode,
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
 /* fclose */
 static int (*old_fclose)(FILE *) = NULL;
 
@@ -184,6 +209,30 @@ FILE *fopen(const char *pathname, const char *mode) {
     return ret;
 }
 
+/* fopen64 */
+static FILE *(*old_fopen64)(const char *, const char *) = NULL;
+
+FILE *fopen64(const char *pathname, const char *mode) {
+    init();
+    if(old_fopen64 == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_fopen64 = dlsym(handle, "fopen64");
+    }
+    FILE *ret = NULL;
+    if(old_fopen64 != NULL) {
+        ret = old_fopen64(pathname, mode);
+        realpath(pathname, path);
+        sprintf(
+            msg,
+            "fopen64(\"%s\", \"%s\") = %p",
+            path,
+            mode,
+            ret);
+        logger_output();
+    }
+    return ret;
+}
 
 /* fread */
 static size_t (*old_fread)(void *, size_t, size_t, FILE *) = NULL;
@@ -293,6 +342,41 @@ int open(const char *pathname, int flags, ...) {
     return ret;
 }
 
+/* open64 */
+static int (*old_open64)(const char *, int, ...) = NULL;
+
+int open64(const char *pathname, int flags, ...) {
+    init();
+    // https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/open.c.html
+    mode_t mode = 0;
+    if (__OPEN_NEEDS_MODE(flags)) {
+        va_list arg;
+        va_start(arg, flags);
+        mode = va_arg(arg, mode_t);
+        va_end(arg);
+    }
+
+    if(old_open64 == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_open64 = dlsym(handle, "open64");
+    }
+    int ret = -1;
+    if(old_open64 != NULL) {
+        ret = old_open64(pathname, flags, mode);
+        realpath(pathname, path);
+        sprintf(
+            msg,
+            "open64(\"%s\", %03o, %03o) = %d",
+            path,
+            flags,
+            mode,
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
 /* read */
 static ssize_t (*old_read)(int, void *, size_t) = NULL;
 
@@ -369,6 +453,28 @@ FILE *tmpfile(void) {
         sprintf(
             msg,
             "tmpfile() = %p",
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
+/* tmpfile64 */
+static FILE *(*old_tmpfile64)(void) = NULL;
+
+FILE *tmpfile64(void) {
+    init();
+    if(old_tmpfile64 == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_tmpfile64 = dlsym(handle, "tmpfile64");
+    }
+    FILE *ret = NULL;
+    if(old_tmpfile64 != NULL) {
+        ret = old_tmpfile64();
+        sprintf(
+            msg,
+            "tmpfile64() = %p",
             ret);
         logger_output();
     }

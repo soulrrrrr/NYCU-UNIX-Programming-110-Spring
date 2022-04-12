@@ -1,4 +1,0 @@
-[logger] fopen("/proc/filesystems", "re") = 0x558a2dc10300
-[logger] fclose("/proc/filesystems") = 0
-[logger] fclose("/dev/pts/0") = 0
-[logger] fclose("/dev/pts/0") = 0
