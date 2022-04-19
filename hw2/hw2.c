@@ -11,7 +11,7 @@
 #include <ctype.h> // isprint()
 
 
-#define MSG_SIZE 2048
+#define MSG_SIZE 4096
 #define PATH_SIZE 1024
 #define PROCPATH_SIZE 512
 char msg[MSG_SIZE];
@@ -23,7 +23,7 @@ void logger_output();
 void init() {
     memset(msg, 0, sizeof(msg));
     memset(path, 0, sizeof(path));
-    memset(procpath, 0, sizeof(path));
+    memset(procpath, 0, sizeof(procpath));
 }
 
 int min(int a, int b) {
@@ -270,7 +270,6 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return ret;
 }
 
-
 /* fwrite */
 static size_t (*old_fwrite)(const void *, size_t, size_t, FILE *) = NULL;
 
@@ -431,6 +430,34 @@ int remove(const char *pathname) {
             msg,
             "remove(\"%s\") = %d",
             path,
+            ret);
+        logger_output();
+    }
+    return ret;
+}
+
+/* rename */
+static int (*old_rename)(const char *, const char *) = NULL;
+
+int rename(const char *oldpath, const char *newpath) {
+    init();
+    if(old_rename == NULL) {
+        void *handle = dlopen("libc.so.6", RTLD_LAZY);
+        if(handle != NULL)
+            old_rename = dlsym(handle, "rename");
+    }
+    int ret = -1;
+    if(old_rename != NULL) {
+        realpath(oldpath, path);
+        char path2[PATH_SIZE];
+        memset(path2, 0, sizeof(path2));
+        realpath(newpath, path2);
+        ret = old_rename(oldpath, newpath);
+        sprintf(
+            msg,
+            "rename(\"%s\", \"%s\") = %d",
+            path,
+            path2,
             ret);
         logger_output();
     }
