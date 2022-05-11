@@ -25,11 +25,14 @@ extern	errno
 	gensys   9, mmap
 	gensys  10, mprotect
 	gensys  11, munmap
+	gensys	13, rt_sigaction
+	gensys	14, rt_sigprocmask
 	gensys  22, pipe
 	gensys  32, dup
 	gensys  33, dup2
 	gensys  34, pause
 	gensys  35, nanosleep
+	gensys	37, alarm
 	gensys  57, fork
 	gensys  60, exit
 	gensys  79, getcwd
@@ -51,6 +54,7 @@ extern	errno
 	gensys 106, setgid
 	gensys 107, geteuid
 	gensys 108, getegid
+	gensys 127, rt_sigpending
 
 	global open:function
 open:
@@ -101,3 +105,8 @@ sleep_quit:
 	add	rsp, 32
 	ret
 
+	global sigret_rt:function
+sigret_rt:
+	mov rdi, 0
+	mov rax, 15
+	syscall

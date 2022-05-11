@@ -178,6 +178,66 @@ size_t strlen(const char *s) {
 	return count;
 }
 
+/* new functions */
+
+int setjmp(jmp_buf env);
+
+sighandler_t signal(int signum, sighandler_t handler) {
+	struct sigaction newact, oldact;
+	newact.sa_handler = handler;
+	newact.sa_flags = 0;
+	sigemptyset(&newact.sa_mask);
+	if (sigaction(signum, &newact, &oldact) < 0)
+        return (SIG_ERR);
+	else
+		return (oldact.sa_handler);
+}
+
+int sigaction(int signum, struct sigaction *act, struct sigaction *oldact) {
+	act->sa_flags |= SA_RESTORER;
+	act->sa_restorer = sigret_rt;
+	long ret = sys_rt_sigaction(signum, act, oldact, sizeof(sigset_t));
+	WRAPPER_RETval(int);
+}
+
+int sigismember(const sigset_t *set, int sig) {
+	return ((*set) & (1 << (sig-1)));
+}
+int sigaddset (sigset_t *set, int sig) {
+	(*set) |= (1 << (sig-1));
+	return 0;
+}
+int sigdelset (sigset_t *set, int sig) {
+	(*set) &= ~(1 << (sig-1));
+	return 0;
+}
+int sigemptyset(sigset_t *set) {
+	(*set) = 0x0;
+	return 0;
+}
+
+int sigfillset(sigset_t *set) {
+	(*set) = -1;
+	return 0;
+}
+int sigpending(sigset_t *set) {
+	long ret = sys_rt_sigpending(set, sizeof(sigset_t));
+	WRAPPER_RETval(int);
+}
+
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
+	long ret = sys_rt_sigprocmask(how, set, oldset, sizeof(sigset_t));
+	WRAPPER_RETval(int);
+}
+
+unsigned int alarm(unsigned int sec) {
+	long ret = sys_alarm(sec);
+	WRAPPER_RETval(unsigned int);
+}
+
+
+/* end new functions */
+
 #define	PERRMSG_MIN	0
 #define	PERRMSG_MAX	34
 

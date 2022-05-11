@@ -8,6 +8,7 @@ typedef int mode_t;
 typedef int uid_t;
 typedef int gid_t;
 typedef int pid_t;
+typedef long long sigset_t;
 
 extern long errno;
 
@@ -129,6 +130,9 @@ extern long errno;
 #define SIGWINCH	28
 #define SIGIO		29
 #define SIGPOLL		SIGIO
+/* man 7 signal */
+#define SIGPWR		30
+#define SIGSYS		31
 
 /* from /usr/include/x86_64-linux-gnu/bits/sigaction.h */
 #define	SA_NOCLDSTOP  1		 /* Don't send SIGCHLD when children stop.  */
@@ -141,10 +145,19 @@ extern long errno;
 # define SA_NODEFER   0x40000000 /* Don't automatically block the signal when
 				    its handler is being executed.  */
 # define SA_RESETHAND 0x80000000 /* Reset to SIG_DFL on entry to handler.  */
+# define SA_RESTORER  0x04000000
 
 #define	SIG_BLOCK     0		 /* Block signals.  */
 #define	SIG_UNBLOCK   1		 /* Unblock signals.  */
 #define	SIG_SETMASK   2		 /* Set the set of blocked signals.  */
+/*
+	SIG_ERR
+	SIG_DFL
+	SIG_IGN
+*/
+#define SIG_ERR (void (*)(int))-1
+#define SIG_DFL (void (*)(int))0
+#define SIG_IGN (void (*)(int))1
 
 struct timespec {
 	long	tv_sec;		/* seconds */
@@ -161,6 +174,41 @@ struct timezone {
 	int	tz_dsttime;	/* type of DST correction */
 };
 
+typedef struct jmp_buf_s {
+	long long reg[8]; // RBX, RSP, RBP, R12, R13, R14, R15, and the return address (to the caller of setjmp)
+	sigset_t mask;
+} jmp_buf[1];
+
+/*
+	sigaction
+	sigset_t
+	sighandler_t
+*/
+
+union sigval {
+	int sival_int;
+	void *sival_ptr;
+};
+typedef struct {
+	int si_signo;
+	int si_code;
+	union sigval si_value;
+	int si_errno;
+	pid_t si_pid;
+	uid_t si_uid;
+	void *si_addr;
+	int si_status;
+	int si_band;
+} siginfo_t;
+
+typedef void (*sighandler_t)(int);
+struct sigaction {
+	void (*sa_handler)(int);
+	unsigned long sa_flags;
+	void (*sa_restorer)(void);
+	sigset_t sa_mask;
+};
+
 /* system calls */
 long sys_read(int fd, char *buf, size_t count);
 long sys_write(int fd, const void *buf, size_t count);
@@ -169,11 +217,14 @@ long sys_close(unsigned int fd);
 long sys_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off);
 long sys_mprotect(void *addr, size_t len, int prot);
 long sys_munmap(void *addr, size_t len);
+long sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact, size_t sigsetsize);
+long sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 long sys_pipe(int *filedes);
 long sys_dup(int filedes);
 long sys_dup2(int oldfd, int newfd);
 long sys_pause();
 long sys_nanosleep(struct timespec *rqtp, struct timespec *rmtp);
+long sys_alarm(unsigned int sec);
 long sys_fork(void);
 long sys_exit(int error_code) __attribute__ ((noreturn));
 long sys_getcwd(char *buf, size_t size);
@@ -195,6 +246,7 @@ long sys_setuid(uid_t uid);
 long sys_setgid(gid_t gid);
 long sys_geteuid();
 long sys_getegid();
+long sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 
 /* wrappers */
 ssize_t	read(int fd, char *buf, size_t count);
@@ -234,6 +286,24 @@ gid_t	getegid();
 void bzero(void *s, size_t size);
 size_t strlen(const char *s);
 void perror(const char *prefix);
-unsigned int sleep(unsigned int s);
+
+/* function definitions (export it with exactly the same type signature) 
+*/
+int sigaction(int signum, struct sigaction *act, struct sigaction *oldact);
+int sigismember(const sigset_t *set, int sig);
+int sigaddset (sigset_t *set, int sig);
+int sigdelset (sigset_t *set, int sig);
+int sigemptyset(sigset_t *set);
+int sigfillset(sigset_t *set);
+int sigpending(sigset_t *set);
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+sighandler_t signal(int signum, sighandler_t handler);
+
+
+int setjmp(jmp_buf env);
+void longjmp(jmp_buf env, int val);
+extern unsigned int sleep(unsigned int seconds);
+unsigned int alarm(unsigned int sec);
+extern void sigret_rt(void);
 
 #endif	/* __LIBMINI_H__ */
