@@ -110,3 +110,31 @@ sigret_rt:
 	mov rdi, 0
 	mov rax, 15
 	syscall
+
+	global setjmp:function
+setjmp:
+	pop rsi
+	mov QWORD [rdi], rbx
+	mov QWORD [rdi+8], rsp
+	mov QWORD [rdi+16], rbp
+	mov QWORD [rdi+24], r12
+	mov QWORD [rdi+32], r13
+	mov QWORD [rdi+40], r14
+	mov QWORD [rdi+48], r15
+	mov QWORD [rdi+56], rsi
+	push rsi
+	mov rax, 0
+	ret
+
+	global longjmp:function
+longjmp:
+	mov rax, rsi
+	mov rbx, QWORD [rdi]
+	mov rsp, QWORD [rdi+8] 
+	mov rbp, QWORD [rdi+16]
+	mov r12, QWORD [rdi+24]
+	mov r13, QWORD [rdi+32]
+	mov r14, QWORD [rdi+40]
+	mov r15, QWORD [rdi+48]
+	jmp QWORD [rdi+56]
+

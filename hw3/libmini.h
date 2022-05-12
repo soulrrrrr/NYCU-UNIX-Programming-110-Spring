@@ -300,8 +300,8 @@ int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 sighandler_t signal(int signum, sighandler_t handler);
 
 
-int setjmp(jmp_buf env);
-void longjmp(jmp_buf env, int val);
+extern int setjmp(jmp_buf env);
+extern void longjmp(jmp_buf env, int val);
 extern unsigned int sleep(unsigned int seconds);
 unsigned int alarm(unsigned int sec);
 extern void sigret_rt(void);

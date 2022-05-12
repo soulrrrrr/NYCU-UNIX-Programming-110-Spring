@@ -1,9 +1,5 @@
 #include "libmini.h"
 void handler(int s) { /* do nothing */
-    if (s == SIGINT)
-        perror("sigint\n");
-    if (s == SIGALRM)
-        perror("sigalrm\n");
 }
 
 int main() {
