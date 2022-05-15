@@ -123,11 +123,17 @@ setjmp:
 	mov QWORD [rdi+48], r15
 	mov QWORD [rdi+56], rsi
 	push rsi
+	mov rsi, 0
+	lea rdx, QWORD [rdi+64]
+	mov rdi, 0
+	mov rcx, 8
+	mov rax, 14
+	syscall
 	mov rax, 0
 	ret
 
-	global longjmp:function
-longjmp:
+	global k_longjmp:function
+k_longjmp:
 	mov rax, rsi
 	mov rbx, QWORD [rdi]
 	mov rsp, QWORD [rdi+8] 

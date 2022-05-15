@@ -301,7 +301,9 @@ sighandler_t signal(int signum, sighandler_t handler);
 
 
 extern int setjmp(jmp_buf env);
+extern int k_setjmp(jmp_buf env);
 extern void longjmp(jmp_buf env, int val);
+extern void k_longjmp(jmp_buf env, int val);
 extern unsigned int sleep(unsigned int seconds);
 unsigned int alarm(unsigned int sec);
 extern void sigret_rt(void);

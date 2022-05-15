@@ -184,19 +184,16 @@ size_t strlen(const char *s) {
 // 	sigset_t oldset;
 // 	sigprocmask(0, NULL, &oldset);
 // 	env[0].mask = oldset;
-// 	int ret = k_setjmp(env);
-// 	errno = ret;
-// 	perror("setjmp");
-// 	perror("setjmp");
-// 	return ret;
-	
+// 	k_setjmp(env);
+// 	return 0;
 // }
 
 
-// void longjmp(jmp_buf env, int val) {
-// 	sigprocmask(0, &(env[0].mask), NULL);
-// 	k_longjmp(env, val);
-// }
+void longjmp(jmp_buf env, int val) {
+	sigset_t newset = env[0].mask;
+	sigprocmask(0, &newset, NULL);
+	k_longjmp(env, val);
+}
 
 sighandler_t signal(int signum, sighandler_t handler) {
 	struct sigaction newact, oldact;
