@@ -1,0 +1,6 @@
+all:
+	gcc -c -g -Wall -masm=intel -fno-stack-protector -fPIC -nostdlib libmini.c
+	yasm -f elf64 -DYASM -D__x86_64__ -DPIC libmini64.asm -o libmini64.o
+	ar rc libmini.a libmini64.o libmini.o
+	ld -shared -o libmini.so libmini64.o libmini.o
+
