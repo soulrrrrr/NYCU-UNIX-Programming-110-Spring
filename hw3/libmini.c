@@ -191,7 +191,7 @@ size_t strlen(const char *s) {
 
 void longjmp(jmp_buf env, int val) {
 	sigset_t newset = env[0].mask;
-	sigprocmask(0, &newset, NULL);
+	sigprocmask(2, &newset, NULL);
 	k_longjmp(env, val);
 }
 
@@ -214,22 +214,27 @@ int sigaction(int signum, struct sigaction *act, struct sigaction *oldact) {
 }
 
 int sigismember(const sigset_t *set, int sig) {
-	return ((*set) & (1 << (sig-1)));
+	if (set == NULL) return -1;
+	return (((*set) & (1 << (sig-1))) > 0);
 }
 int sigaddset (sigset_t *set, int sig) {
+	if (set == NULL) return -1;
 	(*set) |= (1 << (sig-1));
 	return 0;
 }
 int sigdelset (sigset_t *set, int sig) {
+	if (set == NULL) return -1;
 	(*set) &= ~(1 << (sig-1));
 	return 0;
 }
 int sigemptyset(sigset_t *set) {
+	if (set == NULL) return -1;
 	(*set) = 0x0;
 	return 0;
 }
 
 int sigfillset(sigset_t *set) {
+	if (set == NULL) return -1;
 	(*set) = -1;
 	return 0;
 }

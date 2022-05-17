@@ -126,7 +126,7 @@ setjmp:
 	mov rsi, 0
 	lea rdx, QWORD [rdi+64]
 	mov rdi, 0
-	mov rcx, 8
+	mov r10, 8
 	mov rax, 14
 	syscall
 	mov rax, 0
