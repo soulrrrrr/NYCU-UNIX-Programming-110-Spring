@@ -36,6 +36,9 @@ dump1: dump1.o
 dump2: dump2.o ptools.o
 	$(CXX) -o $@ $^ $(LDFLAGS) -lcapstone
 
+hw4: hw4.o helper.o
+	$(CXX) -o $@ $^ $(LDFLAGS) -lcapstone
+
 autodbg: autodbg.o ptools.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
